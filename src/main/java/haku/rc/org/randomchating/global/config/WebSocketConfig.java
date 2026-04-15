@@ -23,7 +23,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 클라이언트가 처음 연결을 시도할 주소 (예: ws://localhost:8080/ws-stomp)
         registry.addEndpoint("/ws-stomp")
                 .setAllowedOriginPatterns("*")
-                .addInterceptors(handshakeInterceptor);
+                .addInterceptors(handshakeInterceptor)
+                .withSockJS();
     }
 
     @Override

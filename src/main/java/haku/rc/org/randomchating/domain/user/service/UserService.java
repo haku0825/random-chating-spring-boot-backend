@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -30,9 +32,13 @@ public class UserService {
 
         User user = User.builder()
                 .loginId(requestDto.getLoginId())
-                .password(passwordEncoder.encode(requestDto.getPassword())) // 🔒 해싱해서 저장
-                .di(requestDto.getDi())
+                .password(passwordEncoder.encode(requestDto.getPassword())) // 🔒 해싱
+                .nickname(requestDto.getLoginId() + "_닉네임") // 아이디를 섞어주면 안 겹침!
+                .di(UUID.randomUUID().toString()) // 👈 매번 겹치지 않는 랜덤 문자열 생성!
                 .role("ROLE_USER")
+                .age(20)
+                .gender(requestDto.getGender())
+                .introduction("롤 좋아함")
                 .build();
         userRepository.save(user);
     }

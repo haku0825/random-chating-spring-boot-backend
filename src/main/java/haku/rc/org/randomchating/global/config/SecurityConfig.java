@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable) // API 서버이므로 CSRF 비활성화
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 미사용
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/signup", "/api/users/login", "/test/**", "/api/test/**", "/h2-console/**").permitAll() // 허용 경로
+                        .requestMatchers("/api/users/signup", "/api/users/login", "/test/**", "/api/test/**", "/h2-console/**", "/error", "/ws-stomp/**").permitAll() // 허용 경로
                         .anyRequest().authenticated() // 나머지는 토큰 필수
                 )
                 // JWT 필터를 시큐리티 필터 체인에 등록

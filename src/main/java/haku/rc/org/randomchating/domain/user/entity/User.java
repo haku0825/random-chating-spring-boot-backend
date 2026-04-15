@@ -63,6 +63,7 @@ public class User {
         this.di = di;
         this.role = role != null ? role : "ROLE_USER";
         this.nickname = nickname;
+        this.introduction = introduction;
         this.age = age;
         this.gender = gender; // 변경됨        this.introduction = introduction;
         this.profileImageUrl = profileImageUrl;
