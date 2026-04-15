@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haku Random Chat - 통합 보안 테스트</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h2 { border-bottom: 2px solid #0984e3; padding-bottom: 10px; color: #0984e3; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; background-color: #0984e3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+    button:hover { background-color: #074b83; }
+    .status-box { margin-top: 10px; padding: 10px; border-radius: 6px; font-size: 0.85em; display: none; }
+    .success { background-color: #e3fcef; color: #00875a; display: block; }
+    .error { background-color: #ffebe6; color: #de350b; display: block; }
+    #chat-section { display: none; margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px; }
+    #message-area { height: 200px; border: 1px solid #eee; overflow-y: auto; background: #fafafa; padding: 10px; margin-bottom: 10px; border-radius: 6px; }
+    .token-info { font-size: 0.7em; color: #777; word-break: break-all; margin-top: 10px; background: #eee; padding: 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>1. 회원가입 (Signup)</h2>
+  <div id="signup-form">
+    <div class="form-group">
+      <label>아이디</label>
+      <input type="text" id="regId" placeholder="예: user123">
+    </div>
+    <div class="form-group">
+      <label>비밀번호</label>
+      <input type="password" id="regPw" placeholder="********">
+    </div>
+    <div class="form-group">
+      <label>닉네임</label>
+      <input type="text" id="regNick" placeholder="랜덤채팅 별명">
+    </div>
+    <div class="form-group">
+      <label>나이</label>
+      <input type="number" id="regAge" value="20">
+    </div>
+    <div class="form-group">
+      <label>성별 (Enum 테스트)</label>
+      <select id="regGender">
+        <option value="MALE">남성 (MALE)</option>
+        <option value="FEMALE">여성 (FEMALE)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>자기소개</label>
+      <textarea id="regIntro" rows="2" placeholder="간단한 소개를 입력하세요"></textarea>
+    </div>
+    <button onclick="signup()">회원가입 하기</button>
+    <div id="signup-status" class="status-box"></div>
+  </div>
+
+  <h2>2. 로그인 (Login)</h2>
+  <div id="login-form">
+    <div class="form-group">
+      <label>아이디</label>
+      <input type="text" id="loginId">
+    </div>
+    <div class="form-group">
+      <label>비밀번호</label>
+      <input type="password" id="loginPw">
+    </div>
+    <button onclick="login()">로그인 및 토큰 획득</button>
+    <div id="login-status" class="status-box"></div>
+    <div id="token-display" class="token-info" style="display:none;"></div>
+  </div>
+
+  <div id="chat-section">
+    <h2>3. 실시간 채팅 (WebSocket)</h2>
+    <p style="font-size: 0.8em; color: #666;">* 로그인 성공 시에만 보안 터널을 통과합니다.</p>
+    <div id="message-area"></div>
+    <input type="text" id="msgInput" placeholder="메시지를 입력하고 엔터!" onkeypress="if(event.keyCode==13) sendMsg()">
+    <button onclick="sendMsg()" style="background-color: #2d3436;">보내기</button>
+    <div id="ws-status" class="status-box"></div>
+  </div>
+</div>
+
+<script>
+  let jwtToken = "";
+  let stompClient = null;
+
+  // --- [1] 회원가입 로직 ---
+  async function signup() {
+    const signupData = {
+      loginId: document.getElementById('regId').value,
+      password: document.getElementById('regPw').value,
+      nickname: document.getElementById('regNick').value,
+      age: parseInt(document.getElementById('regAge').value),
+      gender: document.getElementById('regGender').value, // Enum 문자열 전달
+      introduction: document.getElementById('regIntro').value,
+      di: "TEST_DI_" + Math.random().toString(36).substr(2, 9) // 임시 DI 생성
+    };
+
+    try {
+      const res = await fetch('/api/users/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signupData)
+      });
+
+      const status = document.getElementById('signup-status');
+      if (res.ok) {
+        status.innerText = "회원가입 성공! 이제 로그인을 해주세요.";
+        status.className = "status-box success";
+      } else {
+        const errMsg = await res.text();
+        status.innerText = "회원가입 실패: " + errMsg;
+        status.className = "status-box error";
+      }
+    } catch (e) {
+      alert("서버 연결 실패");
+    }
+  }
+
+  // --- [2] 로그인 로직 ---
+  async function login() {
+    const loginData = {
+      loginId: document.getElementById('loginId').value,
+      password: document.getElementById('loginPw').value
+    };
+
+    try {
+      const res = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginData)
+      });
+
+      const status = document.getElementById('login-status');
+      if (res.ok) {
+        jwtToken = await res.text(); // 서버가 String 토큰을 반환한다고 가정
+        status.innerText = "로그인 성공! JWT 토큰을 획득했습니다.";
+        status.className = "status-box success";
+
+        document.getElementById('token-display').innerText = "JWT: " + jwtToken;
+        document.getElementById('token-display').style.display = "block";
+
+        // 로그인 성공 시 채팅 세션 활성화
+        document.getElementById('chat-section').style.display = "block";
+        connectWebSocket();
+      } else {
+        status.innerText = "로그인 실패: 아이디 또는 비밀번호를 확인하세요.";
+        status.className = "status-box error";
+      }
+    } catch (e) {
+      alert("서버 연결 실패");
+    }
+  }
+
+  // --- [3] 웹소켓 연결 (하이브리드 보안 방식) ---
+  function connectWebSocket() {
+    // 1. Handshake (쿠키가 있다면 자동으로 실려감)
+    const socket = new SockJS('/ws-stomp');
+    stompClient = Stomp.over(socket);
+
+    // 2. STOMP CONNECT (헤더에 Bearer 토큰 주입)
+    const headers = { 'Authorization': 'Bearer ' + jwtToken };
+
+    stompClient.connect(headers, function (frame) {
+      const wsStatus = document.getElementById('ws-status');
+      wsStatus.innerText = "웹소켓 보안 터널 연결 완료!";
+      wsStatus.className = "status-box success";
+
+      // 테스트용 구독
+      stompClient.subscribe('/sub/chat/room/test', function (msg) {
+        const content = JSON.parse(msg.body).content;
+        const sender = JSON.parse(msg.body).sender || "상대방";
+        appendMessage(sender + ": " + content);
+      });
+    }, function (error) {
+      const wsStatus = document.getElementById('ws-status');
+      wsStatus.innerText = "웹소켓 인증 실패: " + error;
+      wsStatus.className = "status-box error";
+    });
+  }
+
+  // 메시지 전송
+  function sendMsg() {
+    const content = document.getElementById('msgInput').value;
+    if (content && stompClient) {
+      const chatMsg = {
+        roomId: "test",
+        content: content,
+        sender: document.getElementById('loginId').value
+      };
+      stompClient.send("/pub/chat/message", {}, JSON.stringify(chatMsg));
+      document.getElementById('msgInput').value = "";
+    }
+  }
+
+  // 메시지 출력
+  function appendMessage(msg) {
+    const area = document.getElementById('message-area');
+    const div = document.createElement('div');
+    div.style.padding = "5px 0";
+    div.style.borderBottom = "1px solid #f0f0f0";
+    div.innerText = msg;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+</script>
+
+</body>
+</html>

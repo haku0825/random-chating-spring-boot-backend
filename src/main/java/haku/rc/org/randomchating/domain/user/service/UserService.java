@@ -39,13 +39,16 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public String login(LoginDTO requestDto) {
+        // 1. 아이디 확인
         User user = userRepository.findByLoginId(requestDto.getLoginId())
-                .orElseThrow(() -> new IllegalArgumentException("아이디가 틀렸습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
 
-        if (!passwordEncoder.matches(requestDto.getPassword(), user.getPassword())) { // 🔒 해시값 비교
-            throw new IllegalArgumentException("비밀번호가 틀렸습니다.");
+        // 2. 비밀번호 확인 (BCrypt 사용)
+        if (!passwordEncoder.matches(requestDto.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        return jwtTokenProvider.createToken(user.getLoginId(), user.getRole()); // 🎫 토큰 반환
+        // 3. JWT 토큰 발행 (유저의 아이디와 역할을 담음)
+        return jwtTokenProvider.createToken(user.getLoginId(), user.getRole());
     }
 }

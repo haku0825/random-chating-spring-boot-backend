@@ -73,4 +73,9 @@ public class TestController {
         redisTemplate.delete(TEST_QUEUE);
         return redisTemplate.opsForList().range(TEST_QUEUE, 0, -1);
     }
+
+    @GetMapping("/test/chat-test")
+    public String chatTest() {
+        return "test-chat"; // templates/test-chat.html을 찾음
+    }
 }

@@ -37,8 +37,9 @@ public class User {
     @Column(nullable = false)
     private int age;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String gender; // "MALE" 또는 "FEMALE"
+    private Gender gender;
 
     @Column(columnDefinition = "TEXT")
     private String introduction;
@@ -56,21 +57,24 @@ public class User {
     private UserStatus status = UserStatus.ACTIVE;
 
     @Builder
-    public User(String loginId, String password, String di, String role, String nickname, int age, String gender, String introduction, String profileImageUrl) {
+    public User(String loginId, String password, String di, String role, String nickname, int age, Gender gender, String introduction, String profileImageUrl) {
         this.loginId = loginId;
         this.password = password;
         this.di = di;
         this.role = role != null ? role : "ROLE_USER";
         this.nickname = nickname;
         this.age = age;
-        this.gender = gender;
-        this.introduction = introduction;
+        this.gender = gender; // 변경됨        this.introduction = introduction;
         this.profileImageUrl = profileImageUrl;
     }
 
     public enum UserStatus {
         ACTIVE,
         SUSPENDED
+    }
+
+    public enum Gender {
+        MALE, FEMALE
     }
 
     public void useCoin(int amount) {
