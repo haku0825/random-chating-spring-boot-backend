@@ -4,7 +4,9 @@ import haku.rc.org.randomchating.domain.user.dto.LoginDTO;
 import haku.rc.org.randomchating.domain.user.dto.UserDTO;
 import haku.rc.org.randomchating.domain.user.entity.User;
 import haku.rc.org.randomchating.domain.user.repository.UserRepository;
+import haku.rc.org.randomchating.global.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     // 1. 회원가입
     @Transactional
@@ -26,27 +30,22 @@ public class UserService {
 
         User user = User.builder()
                 .loginId(requestDto.getLoginId())
-                .password(requestDto.getPassword()) // 일단 평문 저장 (나중에 암호화)
+                .password(passwordEncoder.encode(requestDto.getPassword())) // 🔒 해싱해서 저장
                 .di(requestDto.getDi())
-                .nickname(requestDto.getNickname())
-                .age(requestDto.getAge())
-                .gender(requestDto.getGender())
-                .introduction(requestDto.getIntroduction())
                 .role("ROLE_USER")
                 .build();
-
         userRepository.save(user);
     }
 
-    // 2. 로그인
     @Transactional(readOnly = true)
-    public void login(LoginDTO requestDto) {
+    public String login(LoginDTO requestDto) {
         User user = userRepository.findByLoginId(requestDto.getLoginId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
+                .orElseThrow(() -> new IllegalArgumentException("아이디가 틀렸습니다."));
 
-        if (!user.getPassword().equals(requestDto.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        if (!passwordEncoder.matches(requestDto.getPassword(), user.getPassword())) { // 🔒 해시값 비교
+            throw new IllegalArgumentException("비밀번호가 틀렸습니다.");
         }
-        // 로그인 성공 시 세션 처리나 토큰 발급은 나중에!
+
+        return jwtTokenProvider.createToken(user.getLoginId(), user.getRole()); // 🎫 토큰 반환
     }
 }
