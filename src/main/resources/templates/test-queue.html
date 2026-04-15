@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Redis Queue 매칭 테스트</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .control-group { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        input[type="number"] { width: 80px; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; }
+        .btn-add { background-color: #007bff; }
+        .btn-draw { background-color: #ff4757; font-size: 18px; width: 100%; padding: 15px; margin-bottom: 10px;}
+        .btn-clear { background-color: #747d8c; width: 100%;}
+
+        .queue-display { display: flex; gap: 10px; padding: 15px; background: #2f3542; border-radius: 8px; overflow-x: auto; min-height: 50px; margin-bottom: 20px; }
+        .queue-item { background: #1e90ff; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }
+        .queue-front { border-bottom: 3px solid #ff4757; } /* 1번 타자 표시 */
+
+        .result-box { text-align: center; padding: 20px; font-size: 20px; font-weight: bold; border-radius: 8px; background: #eee; }
+        .success { background: #2ed573; color: white; }
+        .fail { background: #ff4757; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 Redis 매칭 시뮬레이터</h1>
+
+    <div class="control-group">
+        <input type="number" id="numInput" min="1" max="5" value="1">
+        <button class="btn-add" onclick="enqueue()">대기열에 추가 (1~5)</button>
+    </div>
+
+    <h3>현재 대기열 (왼쪽이 1순위)</h3>
+    <div class="queue-display" id="queueList">
+    </div>
+
+    <button class="btn-draw" onclick="drawRandom()">🎲 랜덤 숫자 뽑기 (매칭 시도)</button>
+    <div class="result-box" id="resultBox">결과가 여기에 표시됩니다.</div>
+    <br>
+    <button class="btn-clear" onclick="clearQueue()">🗑️ 큐 전체 비우기</button>
+</div>
+
+<script>
+    // 큐(대기열) 화면 다시 그리기
+    function renderQueue(queueArray) {
+        const queueDiv = document.getElementById('queueList');
+        queueDiv.innerHTML = ''; // 기존 내용 지우기
+
+        if(queueArray.length === 0) {
+            queueDiv.innerHTML = '<span style="color:#a4b0be;">대기열이 비어있습니다.</span>';
+            return;
+        }
+
+        queueArray.forEach((num, index) => {
+            const item = document.createElement('div');
+            item.className = 'queue-item' + (index === 0 ? ' queue-front' : '');
+            item.innerText = num;
+            queueDiv.appendChild(item);
+        });
+    }
+
+    // [전송] API 호출
+    function enqueue() {
+        const num = document.getElementById('numInput').value;
+        if(num < 1 || num > 5) { alert("1에서 5 사이의 숫자를 입력하세요!"); return; }
+
+        fetch(`/api/test/enqueue?number=${num}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => renderQueue(data));
+    }
+
+    // [뽑기] API 호출
+    function drawRandom() {
+        fetch('/api/test/draw', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                const resultBox = document.getElementById('resultBox');
+                resultBox.innerText = `[뽑은 숫자: ${data.drawNumber}] ${data.message}`;
+
+                // 결과에 따라 색상 변경
+                resultBox.className = 'result-box';
+                if(data.status === 'success') resultBox.classList.add('success');
+                if(data.status === 'fail') resultBox.classList.add('fail');
+
+                renderQueue(data.queue);
+            });
+    }
+
+    // [비우기] API 호출
+    function clearQueue() {
+        fetch('/api/test/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('resultBox').innerText = '큐가 초기화되었습니다.';
+                document.getElementById('resultBox').className = 'result-box';
+                renderQueue(data);
+            });
+    }
+
+    // 페이지 로드 시 현재 큐 상태 한 번 불러오기 (새로고침해도 유지됨!)
+    fetch('/api/test/status').then(res => res.json()).then(data => renderQueue(data));
+</script>
+
+</body>
+</html>

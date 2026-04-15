@@ -72,4 +72,15 @@ public class User {
         ACTIVE,
         SUSPENDED
     }
+
+    public void useCoin(int amount) {
+        if (this.coin < amount) {
+            throw new IllegalArgumentException("코인이 부족합니다.");
+        }
+        this.coin -= amount;
+    }
+
+    public void addCoin(int amount) {
+        this.coin += amount;
+    }
 }
