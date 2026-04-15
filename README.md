@@ -7,8 +7,8 @@
 
 ## 🛠 Tech Stack
 - **Backend:** Java 21, Spring Boot 4.0.5
-- **Database:** MySQL 8.0 (User/Log), Redis (Queue/Status Cache)
-- **Security:** JWT (JSON Web Token), Custom Interceptors
+- **Database:** MySQL 8.0 (User/Log/Billing), Redis (Queue/Status Cache)
+- **Security:** Spring Security, JWT (JSON Web Token), Custom Interceptors
 - **Real-time:** Spring WebSocket (STOMP), SockJS
 - **Infrastructure:** Docker, Docker-Compose
 
@@ -26,12 +26,17 @@
 - **쌍방 수락 시스템:** 10초 내에 양측이 모두 수락 버튼을 눌렀을 때만 실제 채팅방 개설.
 - **코인 차감:** 수락 완료 시점에 코인을 차감하며, 트랜잭션 처리를 통해 데이터 정합성 유지.
 
-### 3. 보안 및 인증 (Security)
-- **JWT 인증:** 무상태(Stateless) 인증 방식을 통해 서버 확장성 확보 및 보안 강화.
-- **PASS 성인인증:** 서비스 안전성 확보를 위한 가입 시 실명/성인 인증 연동.
-- **WebSocket 보안:** Handshake 단계에서 JWT 유효성을 검증하여 허가된 유저만 소켓 연결 허용.
+### 3. 수익화 및 결제 시스템 (Monetization & Billing)
+- **간편 결제 연동:** 포트원(PortOne) 등 외부 PG API 연동을 통한 코인 충전 인프라 구축.
+- **프리미엄 서비스:** 코인을 소모하는 '이성 확정 매칭', '대기열 우선 진입(Fast-track)' 기능 및 '프리미엄 멤버십' 구독 모델 제공.
+- **무결성 보장 트랜잭션:** 재화의 변동 로직은 Spring `@Transactional`로 엄격히 관리되며, `CoinHistory` 테이블을 통해 모든 충전/소모 내역을 투명하게 로깅하여 금전적 오류 원천 차단.
 
-### 4. 관리자 관제 시스템
+### 4. 보안 및 인증 (Security)
+- **JWT 인증:** 무상태(Stateless) 인증 방식을 통해 서버 확장성 확보 및 보안 강화.
+- **PASS 본인인증:** 서비스 안전성 확보를 위한 가입 시 실명/성인 인증 연동.
+- **WebSocket 하이브리드 보안:** Handshake 단계(Cookie)와 STOMP Connect 단계(Header)에서 JWT 이중 검증을 통해 허가된 유저만 소켓 연결 허용.
+
+### 5. 관리자 관제 시스템
 - **실시간 신고 처리:** 신고 접수 시 해당 시점의 채팅 로그 스냅샷 자동 보관.
 - **제재 액션:** 관리자 페이지에서 '계정 정지' 또는 '상호 매칭 제외' 처리를 즉시 수행.
 
@@ -43,5 +48,5 @@
 2. **매칭 실행:** 스케줄러가 남/여 큐에서 각 1명씩 추출(Pop) 후 유효성 검사.
 3. **프리뷰 송출:** 웹소켓(`/sub/match`)을 통해 상대방 정보 및 카운트다운 이벤트 전송.
 4. **결과 처리:**
-    - **성공:** 양측 수락 → 코인 차감 → 채팅방 생성 및 입장.
+    - **성공:** 양측 수락 → 코인 차감 이력 저장 → 채팅방 생성 및 입장.
     - **실패:** 거절 또는 타임아웃 → 재화 차감 없이 대기열 복귀 또는 취소.
