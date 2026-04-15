@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "users") // DB에서 user는 예약어라 users로 안전하게 사용
+@Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
@@ -16,58 +16,60 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- 기존 로그인/인증 정보 ---
+    // --- 🔑 로그인 및 인증 정보 ---
     @Column(nullable = false, unique = true)
-    private String email;
+    private String loginId; // 이메일 대신 사용할 로그인 아이디
 
     @Column(nullable = false)
     private String password;
 
+    // 실명인증 고유식별자 (이 값이 같으면 동일 인물)
+    @Column(nullable = false, unique = true)
+    private String di;
+
     @Column(nullable = false)
     private String role;
 
-    // --- 🚀 추가된 랜덤채팅 프로필 정보 ---
+    // --- 🚀 랜덤채팅 프로필 정보 ---
     @Column(nullable = false)
-    private String nickname;
+    private String nickname; // 랜챗에서 사용할 닉네임
 
     @Column(nullable = false)
     private int age;
 
     @Column(nullable = false)
-    private String gender; // "MALE" 또는 "FEMALE" (대기열 분리 핵심 키)
+    private String gender; // "MALE" 또는 "FEMALE"
 
     @Column(columnDefinition = "TEXT")
-    private String introduction; // 자기소개 (하고 싶은 게임, 취향 등 자유형식)
+    private String introduction;
 
-    private String profileImageUrl; // 프로필 사진 URL (초기엔 없을 수 있으므로 nullable)
+    private String profileImageUrl;
 
     @Column(nullable = false)
-    private int coin = 0; // 가입 시 초기 코인 0개 세팅
+    private int coin = 0;
 
     @Column(nullable = false)
     private boolean is_premium = false;
 
-    // --- 🚨 관리자 운영용 상태값 ---
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
 
     @Builder
-    public User(String email, String password, String role, String nickname, int age, String gender, String introduction, String profileImageUrl) {
-        this.email = email;
+    public User(String loginId, String password, String di, String role, String nickname, int age, String gender, String introduction, String profileImageUrl) {
+        this.loginId = loginId;
         this.password = password;
+        this.di = di;
         this.role = role != null ? role : "ROLE_USER";
         this.nickname = nickname;
         this.age = age;
         this.gender = gender;
         this.introduction = introduction;
         this.profileImageUrl = profileImageUrl;
-        // status와 coin은 객체 생성 시 기본값(ACTIVE, 0)이 들어가므로 파라미터에서 제외
     }
 
-    // 유저 상태를 관리할 Enum 클래스
     public enum UserStatus {
-        ACTIVE,      // 정상 활동 중
-        SUSPENDED    // 관리자에 의해 정지됨
+        ACTIVE,
+        SUSPENDED
     }
 }
